@@ -1,0 +1,116 @@
+<style lang="less">
+.cell-group {
+  width: 100%;
+}
+.cell {
+  width: 100%;
+}
+.cell-user-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.cell-nick-name {
+  color: var(--cell-text-color, #323233);
+}
+.cell-avatar {
+  border-radius: 50%;
+  overflow: hidden;
+  height: calc(~'100vw * 0.1');
+  width: calc(~'100vw * 0.1');
+}
+</style>
+
+<template>
+  <div class="container">
+    <van-cell-group class="cell-group">
+      <van-cell
+        center
+        class="avatar"
+      >
+        <view class="cell-user-info">
+          <view class="cell-nick-name">
+            <open-data
+              type="userNickName"
+              lang="zh_CN"
+            ></open-data>
+          </view>
+          <view class="cell-avatar">
+            <open-data type="userAvatarUrl"></open-data>
+          </view>
+        </view>
+      </van-cell>
+      <van-cell
+        class="cell"
+        title="TODO"
+        is-link
+        link-type="navigateTo"
+        url="/pages/todos"
+      />
+    </van-cell-group>
+    <van-dialog
+      id="van-dialog-auth-login"
+      bind:getuserinfo="processLogin"
+    />
+  </div>
+</template>
+
+<script>
+import wepy from '@wepy/core';
+import AUTH from '../utils/auth';
+import req from '../req';
+
+wepy.page({
+  data: { avatarUrl: 'avatarUrl', nickName: '' },
+  methods: {
+    processLogin(e) {
+      if (!e.$wx.detail.userInfo) {
+        wx.showToast({
+          title: '已取消',
+          icon: 'none',
+        });
+        return;
+      }
+      this.avatarUrl = e.$wx.detail.userInfo.avatarUrl;
+      this.nickName = e.$wx.detail.userInfo.nickName;
+      AUTH.login(this, e.$wx.detail.userInfo);
+    },
+    initProfile() {
+      req.profile
+        .basic(wx.getStorageSync('uid'))
+        .then((res) => {
+          console.log(res);
+        })
+        .catch((err) => {
+          if (err.detail.data.statusCode === 401) {
+            AUTH.login(this, {});
+          }
+        });
+    },
+  },
+  onShow: function() {},
+  onLoad() {
+    AUTH.checkHasLogined().then((isLogined) => {
+      if (isLogined) {
+        //this.initProfile();
+      } else {
+        AUTH.openLoginDialog();
+      }
+    });
+  },
+});
+</script>
+
+<config>
+{
+    "navigationBarTitleText": "老三家",
+    "usingComponents": {
+      "van-button": "~@/components/vant/button",
+      "van-cell": "~@/components/vant/cell",
+      "van-cell-group": "~@/components/vant/cell-group",
+      "van-dialog": "~@/components/vant/dialog",
+      "van-image": "~@/components/vant/image"
+    }
+}
+</config>

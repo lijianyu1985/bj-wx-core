@@ -1,0 +1,297 @@
+<style type="less">
+.commoditybottomsheet {
+  width: 100%;
+}
+.bottom-sheet-subdivide {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+.bottom-sheet-subdivide-button {
+  margin: 5px;
+  padding: 0;
+  width: auto;
+  min-width: auto;
+}
+
+.bottom-sheet-subdivide-button button {
+  padding-left: 3px;
+  padding-right: 3px;
+  margin: 0;
+  width: auto;
+  min-width: auto;
+}
+.bottom-sheet-cart-button {
+  width: 100%;
+  display: flex;
+}
+.bottom-sheet-cart-button button {
+  width: 100%;
+}
+.bottom-sheet-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 6px;
+}
+</style>
+
+<template>
+  <view class="bottom-sheet">
+    <commodityiteminfo
+      width="{{windowWidth-130}}"
+      name="{{commoditiy.name}}"
+      photo="{{commoditiy.photo}}"
+      price="{{price}}"
+    />
+    <view
+      wx:if="{{!commoditiy.defaultSubdivide}}"
+      wx:for="{{commoditiy.subdivide}}"
+      wx:for-item="item"
+      wx:key="index"
+      class="bottom-sheet-subdivide"
+    >
+      <text class="bottom-sheet-subdivide-text">{{item.kind}}</text>
+      <block
+        wx:for="{{item.valueList}}"
+        wx:for-item="vl"
+        wx:key="index"
+      >
+        <van-button
+          wx:if="{{!subdivideMap[item.kind+'-'+vl]}}"
+          data-value="{{vl}}"
+          data-kind="{{item.kind}}"
+          data-checked="{{subdivideList && subdivideList[item.kind] === vl}}"
+          disabled="{{true}}"
+          size="mini"
+          class="bottom-sheet-subdivide-button"
+          type="{{subdivideList && subdivideList[item.kind] === vl ? 'primary':'default'}}"
+        >{{vl}}</van-button>
+        <van-button
+          wx:else
+          bind:click="onSubdivideClick"
+          data-value="{{vl}}"
+          data-kind="{{item.kind}}"
+          data-checked="{{subdivideList && subdivideList[item.kind] === vl}}"
+          size="mini"
+          class="bottom-sheet-subdivide-button"
+          type="{{subdivideList && subdivideList[item.kind] === vl ? 'primary':'default'}}"
+        >{{vl}}</van-button>
+      </block>
+    </view>
+    <view class="bottom-sheet-count">
+      <text>数量</text>
+      <van-stepper
+        button-size="24px"
+        disabled="{{!skuChoosed}}"
+        value="{{ count }}"
+        bind:change="onCountChange"
+      />
+    </view>
+    <van-button
+      bind:click="onCartClick"
+      disabled="{{!skuChoosed}}"
+      class="bottom-sheet-cart-button"
+      type="primary"
+    >加入购物车</van-button>
+  </view>
+</template>
+
+<script>
+import wepy from '@wepy/core';
+wepy.component({
+  props: {
+    commoditiy: {},
+    windowWidth: 0,
+  },
+  data: {
+    subdivideList: {},
+    count: 1,
+    skuChoosed: false,
+    subdivideMap: {},
+    subdivideMapAlways: {},
+    subdivideMapTotal: {},
+    subdivideMapTotalTemp: {},
+    kindLength: 0,
+    price: 0,
+    sku: {},
+  },
+  watch: {
+    sku: function(newVal, oldVal) {
+      if (newVal) {
+        this.price = newVal.price;
+      } else {
+        this.price = this.commoditiy.priceRange;
+      }
+    },
+    commoditiy: function(newVal, oldVal) {
+      this.subdivideList = {};
+      this.skuChoosed = false;
+      this.sku = null;
+      this.count = 1;
+      this.subdivideMap = {};
+      this.subdivideMapTotal = {};
+      this.price = this.commoditiy.priceRange;
+      if (newVal.defaultSubdivide) {
+        this.sku = newVal.skus[0];
+        this.skuChoosed = true;
+        return;
+      }
+      let subdivideKeys = [];
+      (newVal.skus || []).forEach((sku, i) => {
+        subdivideKeys = [];
+        (sku.subdivide || []).forEach((subdivide, j) => {
+          this.subdivideMap[`${subdivide.kind}-${subdivide.value}`] = true;
+          subdivideKeys.push(`${subdivide.kind}-${subdivide.value}`);
+        });
+        this.subdivideMapTotal[subdivideKeys.join(',')] = true;
+      });
+      this.subdivideMapTotalTemp = { ...this.subdivideMapTotal };
+      this.subdivideMapAlways = { ...this.subdivideMap };
+      if (subdivideKeys && subdivideKeys.length) {
+        this.kindLength = subdivideKeys.length;
+      }
+      if (
+        newVal.skus &&
+        newVal.skus.length === 1 &&
+        newVal.skus[0].subdivide &&
+        newVal.skus[0].subdivide.length === 1
+      ) {
+        this.onSubdivideClick({
+          $wx: {
+            target: {
+              dataset: {
+                kind: newVal.skus[0].subdivide[0].kind,
+                value: newVal.skus[0].subdivide[0].value,
+              },
+            },
+          },
+        });
+      }
+    },
+  },
+  methods: {
+    onCountChange(e) {
+      this.count = e.$wx.detail;
+    },
+    onSubdivideClick(e) {
+      if (!this.subdivideList) {
+        this.subdivideList = {};
+      }
+      if (e.$wx.target.dataset.checked) {
+        delete this.subdivideList[e.$wx.target.dataset.kind];
+      } else {
+        this.subdivideList = Object.assign({}, this.subdivideList, {
+          [e.$wx.target.dataset.kind]: e.$wx.target.dataset.value,
+        });
+      }
+      const subdivideMapTotalKeys = Object.keys(this.subdivideMapTotal);
+      this.subdivideMapTotalTemp = { ...this.subdivideMapTotal };
+      let availableKeysMap = {};
+      let availableKeys = [];
+      const subdivideMapAlwaysKeys = Object.keys(this.subdivideMapAlways);
+      Object.keys(this.subdivideList).forEach((x) => {
+        const choosedSubdivideKey = x + '-' + this.subdivideList[x];
+        subdivideMapAlwaysKeys.forEach((z) => {
+          if (z.indexOf(x) === 0) {
+            if (availableKeysMap[choosedSubdivideKey]) {
+              availableKeysMap[choosedSubdivideKey].push(z);
+            } else {
+              availableKeysMap[choosedSubdivideKey] = [z];
+            }
+          }
+        });
+        availableKeys = availableKeys.concat(
+          availableKeysMap[choosedSubdivideKey]
+        );
+        subdivideMapTotalKeys.forEach((y) => {
+          if (y.indexOf(choosedSubdivideKey) < 0) {
+            this.subdivideMapTotalTemp[y] = false;
+          } else {
+            availableKeysMap[y] = availableKeysMap[choosedSubdivideKey];
+          }
+        });
+      });
+      subdivideMapTotalKeys.forEach((x) => {
+        if (this.subdivideMapTotalTemp[x]) {
+          availableKeys = availableKeys.concat(x.split(','));
+        }
+      });
+      const availableKeysCounter = {};
+      availableKeys.forEach((x) => {
+        if (availableKeysCounter[x]) {
+          availableKeysCounter[x] = availableKeysCounter[x] + 1;
+        } else {
+          availableKeysCounter[x] = 1;
+        }
+      });
+      const subdivideMapKeys = Object.keys(this.subdivideMap);
+      const subdivideListKeys = Object.keys(this.subdivideList);
+      const subdivideListPrefixKeys = subdivideListKeys.map(
+        (x) => x.split('-')[0]
+      );
+
+      subdivideMapKeys.forEach((x) => {
+        if (subdivideListPrefixKeys.indexOf(x.split('-')[0]) >= 0) {
+          if (this.kindLength === subdivideListKeys.length) {
+            this.subdivideMap[x] =
+              availableKeysCounter[x] >= subdivideListKeys.length - 1;
+          } else {
+            this.subdivideMap[x] =
+              availableKeysCounter[x] >= subdivideListKeys.length;
+          }
+        } else {
+          this.subdivideMap[x] = availableKeys.indexOf(x) >= 0;
+        }
+      });
+      this.subdivideMap = { ...this.subdivideMap };
+      if (
+        Object.keys(this.subdivideList).length ===
+        this.commoditiy.subdivide.length
+      ) {
+        for (var i = 0; i < this.commoditiy.skus.length; i++) {
+          var sku = this.commoditiy.skus[i];
+          if (sku.subdivide) {
+            var matchedCount = 0;
+            for (var j = 0; j < sku.subdivide.length; j++) {
+              var skuSubdivide = sku.subdivide[j];
+              if (
+                skuSubdivide &&
+                this.subdivideList[skuSubdivide.kind] === skuSubdivide.value
+              ) {
+                matchedCount++;
+              }
+            }
+            if (matchedCount === sku.subdivide.length) {
+              this.sku = sku;
+              this.skuChoosed = true;
+              break;
+            }
+          }
+        }
+      } else {
+        this.sku = null;
+        this.skuChoosed = false;
+      }
+      this.subdivideList = { ...this.subdivideList };
+    },
+    onCartClick(e) {
+      if (this.skuChoosed) {
+        this.$emit('add-into-cart', this.commoditiy, this.sku, this.count);
+      }
+    },
+  },
+});
+</script>
+
+<config>
+{
+    "usingComponents": {
+      "van-button": "~@/components/vant/button",
+      "van-stepper": "~@/components/vant/stepper",
+      "commoditybottomsheet": "~@/components/commoditybottomsheet",
+      "commodityiteminfo": "~@/components/commodityiteminfo"
+    }
+}
+</config>

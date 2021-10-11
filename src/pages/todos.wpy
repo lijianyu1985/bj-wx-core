@@ -1,0 +1,135 @@
+<style lang="less">
+.item-container {
+  display: flex;
+  align-items: left;
+  box-sizing: border-box;
+  width: 100%;
+  background-color: #ffffff;
+  margin-top: 10rpx;
+  margin-bottom: 10rpx;
+}
+.cell-group {
+  width: 100%;
+}
+.cell {
+  width: 100%;
+}
+.list {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 32rpx;
+  border-bottom: solid 2rpx #eeeeee;
+  background-color: var(--cell-background-color, #fff);
+}
+</style>
+
+<template>
+  <div class="container">
+    <view
+      class="list cell-group"
+      wx:for="{{todoList}}"
+      wx:key="id"
+    >
+      <van-cell
+        class="cell"
+        border="{{ false }}"
+        title="{{item.name}}"
+        bind:click="onClick"
+        data-id="{{item._id}}"
+      />
+      <van-icon
+        name="records"
+        size="40rpx"
+        bind:click="editTodo"
+        data-id="{{item._id}}"
+      />
+    </view>
+
+    <view style="height:32rpx"></view>
+    <view class="safe-bottom-box">
+      <van-button
+        type="primary"
+        icon="add-o"
+        block
+        bind:click="addTodo"
+      >新增Todo</van-button>
+    </view>
+  </div>
+</template>
+
+<script>
+import wepy from '@wepy/core';
+import req from '../req';
+import AUTH from '../utils/auth';
+
+wepy.page({
+  data: {
+    todoList:[]
+  },
+  onLoad() {
+  },
+  methods: {
+    loadTodoList: function(e) {
+      req.common
+        .find({
+          modelName: 'Todo',
+          query: `{}`,
+        })
+        .then((res) => {
+          this.todoList = res.list;
+        });
+    },
+    addTodo: function() {
+      wx.navigateTo({
+        url: '/pages/todo',
+      });
+    },
+    editTodo: function(e) {
+      wx.navigateTo({
+        url: '/pages/todo?id=' + e.currentTarget.dataset.id,
+      });
+    },
+    onClick: function(e) {
+      if (this.type === 'select') {
+        const eventChannel = this.$wx.getOpenerEventChannel();
+        const todo = this.todoList.find(
+          (x) => x._id === e.currentTarget.dataset.id
+        );
+        wx.navigateBack({
+          success: function() {
+            if (eventChannel) {
+              eventChannel.emit('selected', { todo });
+            }
+          },
+        });
+      } else {
+        wx.navigateTo({
+          url: '/pages/todo?id=' + e.currentTarget.dataset.id,
+        });
+      }
+    },
+  },
+  onShow: function() {
+    AUTH.checkHasLogined().then((isLogined) => {
+      if (isLogined) {
+        this.loadTodoList();
+      } else {
+        wx.navigateBack({});
+      }
+    });
+    },
+});
+</script>
+
+<config>
+{
+    "navigationBarTitleText": "老三家",
+    "usingComponents": {
+      "van-button": "~@/components/vant/button",
+      "van-icon": "~@/components/vant/icon",
+      "van-cell": "~@/components/vant/cell",
+      "van-cell-group": "~@/components/vant/cell-group"
+    },
+}
+</config>

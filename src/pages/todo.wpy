@@ -1,0 +1,150 @@
+<style lang="less">
+.cell-group {
+  width: 100%;
+}
+.cell {
+  width: 100%;
+}
+.safe-bottom-box {
+  width: 100%;
+  margin-top: 10px;
+}
+.todo-save-button {
+  width: 100%;
+}
+.todo-save-button button {
+  width: 100%;
+}
+.area-cell-title {
+  max-width: 90px;
+  min-width: 90px;
+}
+.van-cell .area-cell-value {
+  text-align: left;
+  color: var(--field-input-text-color, #323233);
+}
+</style>
+
+
+<template>
+  <div class="container">
+    <van-cell-group class="cell-group">
+      <van-field
+        label="名"
+        placeholder="请输入名"
+        value="{{ name }}"
+        data-key="name"
+        bind:change="onChange"
+        bind:click-input="onChange"
+      />
+    </van-cell-group>
+    <view class="safe-bottom-box">
+      <van-button
+        class="todo-save-button"
+        type="primary"
+        block
+        bind:click="save"
+      >保存TODO</van-button>
+    </view>
+    <van-toast id="van-toast" />
+  </div>
+</template>
+
+<script>
+import wepy from '@wepy/core';
+import req from '../req';
+import Toast from '../components/vant/toast/toast';
+
+wepy.page({
+  props: {
+    id: '',
+  },
+  data: {
+    show: false,
+    name: '',
+    userId: '',
+  },
+  methods: {
+    onChange(e) {
+      this[e.$wx.target.dataset.key] = e.$wx.detail;
+    },
+    loadTodo(id) {
+      req.common
+        .get({
+          modelName: 'Todo',
+          id: id,
+        })
+        .then((res) => {
+          if (res.success) {
+            this.name = res.data.name;
+          } else {
+            Toast('保存失败');
+          }
+        });
+    },
+    save() {
+      if (this.name) {
+        if (this.id) {
+          req.common
+            .change({
+              modelName: 'Todo',
+              id: this.id,
+              data: {
+                id: this.id,
+                name: this.name
+              },
+            })
+            .then((res) => {
+              if (res.success) {
+                Toast('保存成功');
+                wx.navigateBack({});
+              } else {
+                Toast('保存失败');
+              }
+            });
+        } else {
+          req.common
+            .create({
+              modelName: 'Todo',
+              data: {
+                name: this.name
+              },
+            })
+            .then((res) => {
+              if (res.success) {
+                Toast('保存成功');
+                wx.navigateBack({});
+              } else {
+                Toast('保存失败');
+              }
+            });
+        }
+      } else {
+        Toast('请填写信息');
+      }
+    },
+  },
+  onLoad() {
+    if (this.id) {
+      this.loadTodo(this.id);
+    }
+    this.userId = wx.getStorageSync('uid');
+  },
+});
+</script>
+
+<config>
+{
+    "navigationBarTitleText": "老三家",
+    "usingComponents": {
+      "van-button": "~@/components/vant/button",
+      "van-cell": "~@/components/vant/cell",
+      "van-cell-group": "~@/components/vant/cell-group",
+      "van-field": "~@/components/vant/field",
+      "van-area": "~@/components/vant/area",
+      "van-dialog": "~@/components/vant/dialog",
+      "van-toast": "~@/components/vant/toast",
+      "van-checkbox": "~@/components/vant/checkbox",
+    }
+}
+</config>

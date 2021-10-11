@@ -1,0 +1,42 @@
+<style lang="less">
+.item-container {
+  display: flex;
+  align-items: left;
+  box-sizing: border-box;
+  width: 100%;
+  background-color: #ffffff;
+  margin-top: 10rpx;
+  margin-bottom: 10rpx;
+}
+</style>
+
+<template>
+  <div class="container">
+    Hello
+  </div>
+</template>
+
+<script>
+import wepy from '@wepy/core';
+import req from '../req';
+import { buildPictureUrl } from '../utils/tools';
+wepy.page({
+  data: {
+  },
+  onLoad() {
+  },
+  methods: {
+  },
+  onShow: function() {},
+});
+</script>
+
+<config>
+{
+    "navigationBarTitleText": "老三家",
+    "usingComponents": {
+      "van-tabbar": "~@/components/vant/tabbar",
+      "van-tabbar-item": "~@/components/vant/tabbar-item"
+    },
+}
+</config>
